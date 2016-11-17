@@ -98,6 +98,27 @@ public struct Location
 {
     public ushort X;
     public ushort Y;
+
+    public Location(ushort x, ushort y) : this()
+    {
+        X = x;
+        Y = y;
+    }
+
+    public bool Equals(Location other) {
+        return X == other.X && Y == other.Y;
+    }
+
+    public override bool Equals(object obj) {
+        if (ReferenceEquals(null, obj)) return false;
+        return obj is Location && Equals((Location) obj);
+    }
+
+    public override int GetHashCode() {
+        unchecked {
+            return (X.GetHashCode() * 397) ^ Y.GetHashCode();
+        }
+    }
 }
 
 public struct Move
