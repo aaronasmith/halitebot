@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -13,6 +14,10 @@ public class MyBot
     private static ushort myID;
 
     private static bool debug = true;
+
+    private static Dictionary<int, Dictionary<Direction, Location>> rowEdges;
+    private static Dictionary<int, Dictionary<Direction, Location>> columnEdges;
+
 
     public static void Main(string[] args) {
         Console.SetIn(Console.In);
@@ -34,6 +39,8 @@ public class MyBot
         {
             Networking.getFrame(ref map); // Update the map to reflect the moves before this turn
             var moves = new List<Move>();
+            rowEdges = new Dictionary<int, Dictionary<Direction, Location>>();
+            columnEdges = new Dictionary<int, Dictionary<Direction, Location>>();
 
             Log.Information($"Move: {move++}");
             try
@@ -69,8 +76,10 @@ public class MyBot
         // Find any borders we can take over.
         var nonOwned = siteDictionary.Where(s => s.Value.Owner != myID).OrderByDescending(s => s.Value.Production).ThenBy(s => s.Value.Strength).ToList();
 
-        //foreach (var available in nonOwned) {
-        //    if (available.Value.Strength < site.Strength) {
+        //foreach (var available in nonOwned)
+        //{
+        //    if (available.Value.Strength < site.Strength)
+        //    {
         //        return new Move(location, available.Key);
         //    }
         //}
@@ -86,23 +95,107 @@ public class MyBot
             }
             return new Move(location, Direction.Still);
         }
+        var direction = FindClosestEdge(location);
+        return new Move(location, direction);
+    }
 
-        var bestDirection = Direction.Still;
-        if (site.Strength == 255) {
-            if (siteDictionary.Any(s => s.Value.Strength > 0 && s.Value.Strength < 255)) {
-                bestDirection = siteDictionary.First(s => s.Value.Strength > 0 && s.Value.Strength < 255).Key;
+    private static Direction FindClosestEdge(Location location) {
+        var east = FindEdgeInDirection(location, Direction.East);
+        //Log.Information($"({location.X},{location.Y}):East:({east.X},{east.Y})");
+        var west = FindEdgeInDirection(location, Direction.West);
+        //Log.Information($"({location.X},{location.Y}):West:({west.X},{west.Y})");
+        var north = FindEdgeInDirection(location, Direction.North);
+        //Log.Information($"({location.X},{location.Y}):North:({north.X},{north.Y})");
+        var south = FindEdgeInDirection(location, Direction.South);
+        //Log.Information($"({location.X},{location.Y}):South:({south.X},{south.Y})");
+        var shortestDistance = ushort.MaxValue;
+        var direction = Direction.Still;
+        if (!east.Equals(location)) {
+            var distance = Math.Abs(east.X - location.X);
+            if (distance < shortestDistance) {
+                direction = Direction.East;
+                shortestDistance = (ushort)distance;
             }
-        } else {
-            var bestStrength = 0;
-            foreach (var s in siteDictionary) {
-                if (s.Value.Strength + site.Strength > bestStrength) {
-                    bestStrength = (ushort) (s.Value.Strength + site.Strength);
-                    bestDirection = s.Key;
+            if (distance == shortestDistance)
+                direction = random.Next(1) == 0 ? direction : Direction.East;
+        }
+        if (!west.Equals(location)) {
+            var distance = Math.Abs(location.X - west.X);
+            if (distance < shortestDistance) {
+                direction = Direction.West;
+                shortestDistance = (ushort)distance;
+            }
+            if (distance == shortestDistance)
+                direction = random.Next(1) == 0 ? direction : Direction.West;
+        }
+        if (!south.Equals(location))
+        {
+            var distance = Math.Abs(south.Y - location.Y);
+            if (distance < shortestDistance) {
+                direction = Direction.South;
+                shortestDistance = (ushort)distance;
+            }
+            if (distance == shortestDistance)
+                direction = random.Next(1) == 0 ? direction : Direction.South;
+        }
+        if (!north.Equals(location))
+        {
+            var distance = Math.Abs(location.Y - north.Y);
+            if (distance < shortestDistance) {
+                direction = Direction.North;
+                shortestDistance = (ushort)distance;
+            }
+            if (distance == shortestDistance)
+                direction = random.Next(1) == 0 ? direction : Direction.North;
+        }
+        
+        return direction;
+    }
+
+    private static Location FindEdgeInDirection(Location location, Direction direction) {
+        Dictionary<int, Dictionary<Direction, Location>> rowColumnGroup;
+        Dictionary<Direction, Location> rowColumnEdges = null;
+
+        int rowOrColumnNumber;
+
+        switch (direction) {
+            case Direction.North:
+            case Direction.South:
+                rowColumnGroup = columnEdges;
+                rowOrColumnNumber = location.X;
+                if (columnEdges.ContainsKey(location.X)) {
+                    rowColumnEdges = columnEdges[location.X];
+                    if (rowColumnEdges.ContainsKey(direction)) {
+                        return rowColumnEdges[direction];
+                    }
                 }
-            }
+                break;
+            case Direction.West:
+            case Direction.East:
+                rowColumnGroup = rowEdges;
+                rowOrColumnNumber = location.Y;
+                if (rowEdges.ContainsKey(location.Y)) {
+                    rowColumnEdges = rowEdges[location.Y];
+                    if (rowColumnEdges.ContainsKey(direction)) {
+                        return rowColumnEdges[direction];
+                    }
+                }
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
         }
 
-        return new Move(location, bestDirection);
+        Location check = location;
+        do {
+            check = GetLocationInDirection(check, direction);
+        } while (!location.Equals(check) && map[check].Owner == myID);
+
+        if (rowColumnEdges == null) {
+            var edge = new Dictionary<Direction, Location> {{direction, check}};
+            rowColumnGroup.Add(rowOrColumnNumber, edge);
+        }
+        
+        return check;
     }
 
     private static Direction GetOppositDirection(Direction direction) {
