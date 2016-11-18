@@ -1,0 +1,7 @@
+*.hlt
+*.exe
+/bin
+/obj
+*.vs
+*.zip
+*.dll
