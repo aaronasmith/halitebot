@@ -23,8 +23,8 @@ public class MyBot
         Console.SetIn(Console.In);
         Console.SetOut(Console.Out);
 
-        File.Delete("Aronbot.log");
-        Log.Setup("Aronbot.log");
+        //File.Delete("Aronbot.log");
+        //Log.Setup("Aronbot.log");
 
         map = Networking.getInit(out myID);
 
@@ -42,7 +42,7 @@ public class MyBot
             rowEdges = new Dictionary<int, Dictionary<Direction, Location>>();
             columnEdges = new Dictionary<int, Dictionary<Direction, Location>>();
 
-            Log.Information($"Move: {move++}");
+            //Log.Information($"Move: {move++}");
             try
             {
                 for (ushort x = 0; x < map.Width; x++)
@@ -58,7 +58,7 @@ public class MyBot
             }
             catch (Exception ex)
             {
-                Log.Error(ex);
+                //Log.Error(ex);
             }
 
             Networking.SendMoves(moves); // Send moves
@@ -68,21 +68,10 @@ public class MyBot
     public static Move Move(Location location) {
         var site = map[location];
 
-        if(site.Strength < site.Production * 5)
-            return  new Move(location, Direction.Still);
-
         var siteDictionary = GetSurroundingSites(location);
 
         // Find any borders we can take over.
         var nonOwned = siteDictionary.Where(s => s.Value.Owner != myID).OrderByDescending(s => s.Value.Production).ThenBy(s => s.Value.Strength).ToList();
-
-        //foreach (var available in nonOwned)
-        //{
-        //    if (available.Value.Strength < site.Strength)
-        //    {
-        //        return new Move(location, available.Key);
-        //    }
-        //}
 
         // We're on the edge or alone, stay here.
         if (nonOwned.Any()) {
@@ -95,6 +84,10 @@ public class MyBot
             }
             return new Move(location, Direction.Still);
         }
+
+        if (site.Strength < site.Production * random.Next(3, 6) && site.Strength != 255)
+            return new Move(location, Direction.Still);
+
         var direction = FindClosestEdge(location);
         return new Move(location, direction);
     }
