@@ -141,20 +141,27 @@ public struct Move
 /// </summary>
 public class Map
 {
-    public void Update(string gameMapStr) {
-        var gameMapValues = new Queue<string>(gameMapStr.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries));
+    private Dictionary<int, Dictionary<Direction, Location>> rowEdges;
+    private Dictionary<int, Dictionary<Direction, Location>> columnEdges;
+
+    public void Update(string gameMapStr)
+    {
+        var gameMapValues = new Queue<string>(gameMapStr.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
 
         ushort x = 0, y = 0;
-        while (y < Height) {
+        while (y < Height)
+        {
             ushort counter, owner;
             if (!ushort.TryParse(gameMapValues.Dequeue(), out counter))
                 throw new ApplicationException("Could not get some counter from stdin");
             if (!ushort.TryParse(gameMapValues.Dequeue(), out owner))
                 throw new ApplicationException("Could not get some owner from stdin");
-            while (counter > 0) {
+            while (counter > 0)
+            {
                 _sites[x, y].Owner = owner;
                 x++;
-                if (x == Width) {
+                if (x == Width)
+                {
                     x = 0;
                     y++;
                 }
@@ -163,8 +170,10 @@ public class Map
         }
 
         var strengthValues = gameMapValues; // Referencing same queue, but using a name that is more clear
-        for (y = 0; y < Height; y++) {
-            for (x = 0; x < Width; x++) {
+        for (y = 0; y < Height; y++)
+        {
+            for (x = 0; x < Width; x++)
+            {
                 ushort strength;
                 if (!ushort.TryParse(strengthValues.Dequeue(), out strength))
                     throw new ApplicationException("Could not get some strength value from stdin");
@@ -176,8 +185,10 @@ public class Map
     /// <summary>
     /// Get a read-only structure representing the current state of the site at the supplied coordinates.
     /// </summary>
-    public Site this[ushort x, ushort y] {
-        get {
+    public Site this[ushort x, ushort y]
+    {
+        get
+        {
             if (x >= Width)
                 throw new IndexOutOfRangeException(string.Format("Cannot get site at ({0},{1}) beacuse width is only {2}", x, y, Width));
             if (y >= Height)
@@ -205,32 +216,39 @@ public class Map
 
     private readonly Site[,] _sites;
 
-    private Map(ushort width, ushort height) {
+    private Map(ushort width, ushort height)
+    {
         _sites = new Site[width, height];
-        for (ushort x = 0; x < width; x++) {
-            for (ushort y = 0; y < height; y++) {
+        for (ushort x = 0; x < width; x++)
+        {
+            for (ushort y = 0; y < height; y++)
+            {
                 _sites[x, y] = new Site();
             }
         }
     }
 
-    private static Tuple<ushort, ushort> ParseMapSize(string mapSizeStr) {
+    private static Tuple<ushort, ushort> ParseMapSize(string mapSizeStr)
+    {
         ushort width, height;
-        var parts = mapSizeStr.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+        var parts = mapSizeStr.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2 || !ushort.TryParse(parts[0], out width) || !ushort.TryParse(parts[1], out height))
             throw new ApplicationException("Could not get map size from stdin during init");
         return Tuple.Create(width, height);
     }
 
-    public static Map ParseMap(string mapSizeStr, string productionMapStr, string gameMapStr) {
+    public static Map ParseMap(string mapSizeStr, string productionMapStr, string gameMapStr)
+    {
         var mapSize = ParseMapSize(mapSizeStr);
         var map = new Map(mapSize.Item1, mapSize.Item2);
 
-        var productionValues = new Queue<string>(productionMapStr.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries));
+        var productionValues = new Queue<string>(productionMapStr.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
 
         ushort x, y;
-        for (y = 0; y < map.Height; y++) {
-            for (x = 0; x < map.Width; x++) {
+        for (y = 0; y < map.Height; y++)
+        {
+            for (x = 0; x < map.Width; x++)
+            {
                 ushort production;
                 if (!ushort.TryParse(productionValues.Dequeue(), out production))
                     throw new ApplicationException("Could not get some production value from stdin");
@@ -245,4 +263,160 @@ public class Map
 
     #endregion
 
+    public void ResetCache() {
+        rowEdges = new Dictionary<int, Dictionary<Direction, Location>>();
+        columnEdges = new Dictionary<int, Dictionary<Direction, Location>>();
+    }
+
+    public  Direction FindClosestEdge(Location location, ushort id)
+    {
+        var random = new Random();
+
+        var east = FindEdgeInDirection(location, Direction.East, id);
+        //Log.Information($"({location.X},{location.Y}):East:({east.X},{east.Y})");
+        var west = FindEdgeInDirection(location, Direction.West, id);
+        //Log.Information($"({location.X},{location.Y}):West:({west.X},{west.Y})");
+        var north = FindEdgeInDirection(location, Direction.North, id);
+        //Log.Information($"({location.X},{location.Y}):North:({north.X},{north.Y})");
+        var south = FindEdgeInDirection(location, Direction.South, id);
+        //Log.Information($"({location.X},{location.Y}):South:({south.X},{south.Y})");
+        var shortestDistance = ushort.MaxValue;
+        var direction = Direction.Still;
+        if (!east.Equals(location))
+        {
+            var distance = east.X < location.X ? east.X + (Width - location.X) : east.X - location.X;
+            if (distance < shortestDistance)
+            {
+                direction = Direction.East;
+                shortestDistance = (ushort)distance;
+            }
+            else if (distance == shortestDistance)
+                direction = random.Next(1) == 0 ? direction : Direction.East;
+        }
+        if (!west.Equals(location)) {
+            var distance = west.X > location.X ? location.X + (Width - west.X) : location.X - west.X;
+            if (distance < shortestDistance)
+            {
+                direction = Direction.West;
+                shortestDistance = (ushort)distance;
+            }
+            else if (distance == shortestDistance)
+                direction = random.Next(1) == 0 ? direction : Direction.West;
+        }
+        if (!south.Equals(location))
+        {
+            var distance = south.Y < location.Y ? south.Y + (Height - location.Y) : south.Y - location.Y;
+            if (distance < shortestDistance)
+            {
+                direction = Direction.South;
+                shortestDistance = (ushort)distance;
+            }
+            else if (distance == shortestDistance)
+                direction = random.Next(1) == 0 ? direction : Direction.South;
+        }
+        if (!north.Equals(location))
+        {
+            var distance = north.Y > location.Y ? location.Y + (Width - north.Y) : location.Y - north.Y;
+            if (distance < shortestDistance)
+            {
+                direction = Direction.North;
+            }
+            else if (distance == shortestDistance)
+                direction = random.Next(1) == 0 ? direction : Direction.North;
+        }
+
+        return direction;
+    }
+
+    private Location FindEdgeInDirection(Location location, Direction direction, ushort id)
+    {
+        if (rowEdges == null || columnEdges == null) {
+            ResetCache();
+        }
+
+        Dictionary<int, Dictionary<Direction, Location>> rowColumnGroup;
+        Dictionary<Direction, Location> rowColumnEdges = null;
+
+        int rowOrColumnNumber;
+
+        switch (direction)
+        {
+            case Direction.North:
+            case Direction.South:
+                rowColumnGroup = columnEdges;
+                rowOrColumnNumber = location.X;
+                if (columnEdges.ContainsKey(location.X))
+                {
+                    rowColumnEdges = columnEdges[location.X];
+                    if (rowColumnEdges.ContainsKey(direction))
+                    {
+                        return rowColumnEdges[direction];
+                    }
+                }
+                break;
+            case Direction.West:
+            case Direction.East:
+                rowColumnGroup = rowEdges;
+                rowOrColumnNumber = location.Y;
+                if (rowEdges.ContainsKey(location.Y))
+                {
+                    rowColumnEdges = rowEdges[location.Y];
+                    if (rowColumnEdges.ContainsKey(direction))
+                    {
+                        return rowColumnEdges[direction];
+                    }
+                }
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
+        }
+
+        Location check = location;
+        do
+        {
+            check = GetLocationInDirection(check, direction);
+        } while (!location.Equals(check) && this[check].Owner == id);
+
+        if (rowColumnEdges == null)
+        {
+            var edge = new Dictionary<Direction, Location> { { direction, check } };
+            rowColumnGroup.Add(rowOrColumnNumber, edge);
+        }
+
+        return check;
+    }
+
+    public Dictionary<Direction, Site> GetSurroundingSites(Location location)
+    {
+        var siteDictionary = new Dictionary<Direction, Site> {
+            {Direction.North, GetSiteInDirection(location, Direction.North)},
+            {Direction.East, GetSiteInDirection(location, Direction.East)},
+            {Direction.South, GetSiteInDirection(location, Direction.South)},
+            {Direction.West, GetSiteInDirection(location, Direction.West)}
+        };
+        return siteDictionary;
+    }
+
+    public Site GetSiteInDirection(Location location, Direction direction)
+    {
+        return this[GetLocationInDirection(location, direction)];
+    }
+
+    public Location GetLocationInDirection(Location location, Direction direction)
+    {
+        switch (direction)
+        {
+            case Direction.North:
+                return new Location(location.X, location.Y - 1 < 0 ? (ushort)(Height - 1) : (ushort)(location.Y - 1));
+            case Direction.East:
+                return new Location(location.X + 1 > (ushort)(Width - 1) ? (ushort)0 : (ushort)(location.X + 1), location.Y);
+            case Direction.South:
+                return new Location(location.X, location.Y + 1 > (ushort)(Height - 1) ? (ushort)0 : (ushort)(location.Y + 1));
+            case Direction.West:
+                return new Location(location.X - 1 < 0 ? (ushort)(Width - 1) : (ushort)(location.X - 1), location.Y);
+            default:
+                throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
+        }
+
+    }
 }

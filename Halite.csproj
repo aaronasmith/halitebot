@@ -41,9 +41,23 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="xunit">
+      <HintPath>xunit.1.9.2\lib\net20\xunit.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.runner.msbuild">
+      <HintPath>xunit.1.9.2\lib\net20\xunit.runner.msbuild.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.runner.tdnet">
+      <HintPath>xunit.1.9.2\lib\net20\xunit.runner.tdnet.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.runner.utility">
+      <HintPath>xunit.1.9.2\lib\net20\xunit.runner.utility.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CamBot.cs" />
     <Compile Include="HaliteHelper.cs" />
+    <Compile Include="MapTests.cs" />
     <Compile Include="MyBot.cs" />
     <Compile Include="MySecondBot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
