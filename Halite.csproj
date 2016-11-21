@@ -57,6 +57,7 @@
   <ItemGroup>
     <Compile Include="CamBot.cs" />
     <Compile Include="HaliteHelper.cs" />
+    <Compile Include="HaliteHelperSecondBot.cs" />
     <Compile Include="MapTests.cs" />
     <Compile Include="MyBot.cs" />
     <Compile Include="MySecondBot.cs" />

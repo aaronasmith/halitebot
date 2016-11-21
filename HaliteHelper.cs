@@ -285,47 +285,53 @@ public class Map
         if (!east.Equals(location))
         {
             var distance = east.X < location.X ? east.X + (Width - location.X) : east.X - location.X;
-            if (distance < shortestDistance)
+            if (UseDirection(location, id, distance, shortestDistance, random, direction, Direction.East))
             {
                 direction = Direction.East;
                 shortestDistance = (ushort)distance;
             }
-            else if (distance == shortestDistance)
-                direction = random.Next(1) == 0 ? direction : Direction.East;
         }
         if (!west.Equals(location)) {
             var distance = west.X > location.X ? location.X + (Width - west.X) : location.X - west.X;
-            if (distance < shortestDistance)
-            {
+            if (UseDirection(location, id, distance, shortestDistance, random, direction, Direction.West)) {
                 direction = Direction.West;
-                shortestDistance = (ushort)distance;
+                shortestDistance = (ushort) distance;
             }
-            else if (distance == shortestDistance)
-                direction = random.Next(1) == 0 ? direction : Direction.West;
         }
         if (!south.Equals(location))
         {
             var distance = south.Y < location.Y ? south.Y + (Height - location.Y) : south.Y - location.Y;
-            if (distance < shortestDistance)
+            if (UseDirection(location, id, distance, shortestDistance, random, direction, Direction.South))
             {
                 direction = Direction.South;
                 shortestDistance = (ushort)distance;
             }
-            else if (distance == shortestDistance)
-                direction = random.Next(1) == 0 ? direction : Direction.South;
         }
         if (!north.Equals(location))
         {
             var distance = north.Y > location.Y ? location.Y + (Width - north.Y) : location.Y - north.Y;
-            if (distance < shortestDistance)
+            if (UseDirection(location, id, distance, shortestDistance, random, direction, Direction.North))
             {
                 direction = Direction.North;
             }
-            else if (distance == shortestDistance)
-                direction = random.Next(1) == 0 ? direction : Direction.North;
         }
 
         return direction;
+    }
+
+    private bool UseDirection(Location location, ushort id, int distance, ushort shortestDistance, Random random, Direction originalDirection, Direction newDirection) {
+        bool useDirection = false;
+        if (distance < shortestDistance) {
+            useDirection = true;
+        } else if (distance == shortestDistance)
+            useDirection = random.Next(1) == 0;
+
+        var originalSite = originalDirection == Direction.Still ? new Site {Production = 0, Owner = 500, Strength = 300} : this[FindEdgeInDirection(location, originalDirection, id)];
+        var newSite = this[FindEdgeInDirection(location, newDirection, id)];
+        // Only use this direction if it has more or equal production.
+        var originalWeight = originalDirection == Direction.Still ? ushort.MaxValue : originalSite.Strength - originalSite.Production * 5;
+        var newWeight = newSite.Strength - newSite.Production * 5;
+        return useDirection && (originalWeight >= newWeight);
     }
 
     private Location FindEdgeInDirection(Location location, Direction direction, ushort id)
